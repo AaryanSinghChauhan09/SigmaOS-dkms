@@ -97,9 +97,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Status { name, status, kernel } => {
             let k = kernel.unwrap_or_else(current_kernel);
-            db.set_status(&name, &k, status.into())?;
+            let st: ModuleStatus = status.into();
+            db.set_status(&name, &k, st)?;
             save(&db, &cli.db)?;
-            println!("{name} on {k}: {:?}", status.into() as ModuleStatus);
+            println!("{name} on {k}: {st:?}");
         }
         Commands::Missing => {
             let k = current_kernel();
