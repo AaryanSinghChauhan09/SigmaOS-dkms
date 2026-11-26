@@ -82,7 +82,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
         Commands::List => {
             for m in db.list() {
-                println!("{} {} ({} kernels tracked)", m.name, m.version, m.kernels.len());
+                println!(
+                    "{} {} ({} kernels tracked)",
+                    m.name,
+                    m.version,
+                    m.kernels.len()
+                );
             }
         }
         Commands::Add { name, version } => {
@@ -95,7 +100,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             save(&db, &cli.db)?;
             println!("removed {name}");
         }
-        Commands::Status { name, status, kernel } => {
+        Commands::Status {
+            name,
+            status,
+            kernel,
+        } => {
             let k = kernel.unwrap_or_else(current_kernel);
             let st: ModuleStatus = status.into();
             db.set_status(&name, &k, st)?;
