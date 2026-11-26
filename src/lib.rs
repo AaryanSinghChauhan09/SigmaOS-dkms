@@ -142,3 +142,69 @@ pub fn current_kernel() -> String {
         .map(|s| s.trim().to_string())
         .unwrap_or_else(|_| "unknown".into())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_remove_and_status() {
+        let mut db = DkmsDb::default();
+        db.add_module("vboxdrv", "6.1.0").unwrap();
+        assert!(db.list().len() == 1);
+        assert!(matches!(
+            db.add_module("", "1.0"),
+            Err(DkmsError::Validation(_))
+        ));
+        db.set_status("vboxdrv", "6.8.0", ModuleStatus::Built)
+            .unwrap();
+        db.set_status("vboxdrv", "6.8.0", ModuleStatus::Installed)
+            .unwrap();
+        assert!(matches!(
+            db.set_status("ghost", "6.8.0", ModuleStatus::Built),
+            Err(DkmsError::NotFound(_))
+        ));
+        db.remove_module("vboxdrv").unwrap();
+        assert!(matches!(
+            db.remove_module("vboxdrv"),
+            Err(DkmsError::NotFound(_))
+        ));
+    }
+
+    #[test]
+    fn missing_for_kernel() {
+        let mut db = DkmsDb::default();
+        db.add_module("m1", "1.0").unwrap();
+        db.add_module("m2", "2.0").unwrap();
+        db.set_status("m1", "6.8.0", ModuleStatus::Installed)
+            .unwrap();
+        db.set_status("m2", "6.8.0", ModuleStatus::Failed).unwrap();
+        // m1 is installed for 6.8.0; m2 failed -> still missing.
+        let missing = db.missing_for_kernel("6.8.0");
+        assert_eq!(missing.len(), 1);
+        assert_eq!(missing[0].name, "m2");
+        // Unknown kernel: both missing.
+        assert_eq!(db.missing_for_kernel("6.9.0").len(), 2);
+        // Built also counts as present.
+        db.set_status("m2", "6.8.0", ModuleStatus::Built).unwrap();
+        assert!(db.missing_for_kernel("6.8.0").is_empty());
+    }
+
+    #[test]
+    fn save_load_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("db.json");
+        let mut db = DkmsDb::default();
+        db.add_module("rtl88xxau", "1.0").unwrap();
+        db.set_status("rtl88xxau", "6.8.0-arch1-1", ModuleStatus::Built)
+            .unwrap();
+        db.save(&path).unwrap();
+        let loaded = DkmsDb::load(&path).unwrap();
+        assert_eq!(loaded.modules.len(), 1);
+        assert_eq!(
+            loaded.modules["rtl88xxau"].kernels["6.8.0-arch1-1"],
+            ModuleStatus::Built
+        );
+        assert!(DkmsDb::load(&dir.path().join("missing.json")).is_err());
+    }
+}
