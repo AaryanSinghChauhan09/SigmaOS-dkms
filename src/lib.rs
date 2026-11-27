@@ -209,14 +209,15 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_module_rejected_aaa() {
+    fn test_add_module_updates_version_aaa() {
         // Arrange
         let mut db = DkmsDb::default();
         db.add_module("wireguard", "1.0").unwrap();
         // Act
         let res = db.add_module("wireguard", "1.1");
         // Assert
-        assert!(res.is_err());
+        assert!(res.is_ok());
+        assert_eq!(db.modules["wireguard"].version, "1.1");
     }
 
     #[test]
