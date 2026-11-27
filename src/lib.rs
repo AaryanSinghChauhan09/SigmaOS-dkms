@@ -196,15 +196,36 @@ mod tests {
         let path = dir.path().join("db.json");
         let mut db = DkmsDb::default();
         db.add_module("rtl88xxau", "1.0").unwrap();
-        db.set_status("rtl88xxau", "6.8.0-arch1-1", ModuleStatus::Built)
+        db.set_status("rtl88xxau", "6.8.0-sigma1-1", ModuleStatus::Built)
             .unwrap();
         db.save(&path).unwrap();
         let loaded = DkmsDb::load(&path).unwrap();
         assert_eq!(loaded.modules.len(), 1);
         assert_eq!(
-            loaded.modules["rtl88xxau"].kernels["6.8.0-arch1-1"],
+            loaded.modules["rtl88xxau"].kernels["6.8.0-sigma1-1"],
             ModuleStatus::Built
         );
         assert!(DkmsDb::load(&dir.path().join("missing.json")).is_err());
+    }
+
+    #[test]
+    fn test_duplicate_module_rejected_aaa() {
+        // Arrange
+        let mut db = DkmsDb::default();
+        db.add_module("wireguard", "1.0").unwrap();
+        // Act
+        let res = db.add_module("wireguard", "1.1");
+        // Assert
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_set_status_unknown_module_fails_aaa() {
+        // Arrange
+        let mut db = DkmsDb::default();
+        // Act
+        let res = db.set_status("nonexistent", "6.8.0-sigma1-1", ModuleStatus::Built);
+        // Assert
+        assert!(res.is_err());
     }
 }
